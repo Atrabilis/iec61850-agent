@@ -1,0 +1,28 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: Vet, test and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Go vet and tests
+        run: make test
+
+      - name: Build agent (no cgo)
+        run: make agent
+
+      # The static (musl) build is what gets distributed; it also proves the reader compiles cleanly.
+      - name: Build static reader
+        run: make reader-static

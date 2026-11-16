@@ -1,0 +1,47 @@
+# Example config for one NOJA Power recloser (RC-10/RC-15, firmware 1.27). One file per device type;
+# keep site-specific configs (addresses, credentials) outside this repository.
+plant: example_plant
+
+# Run timestamp rounded down to this step (default 1m). Must not be shorter than the timer interval:
+# two runs in the same step write the same row.
+timestamp_resolution: 1m
+
+reader:
+  # path: /usr/local/bin/iec61850-read   # default: next to the agent binary, then $PATH
+  timeout_ms: 10000   # per MMS request
+  delay_ms: 20        # pause between reads, to go easy on the protection device
+  run_timeout: 2m     # whole read of one device
+
+devices:
+  - device:
+      name: "noja_recloser"
+      host: "192.0.2.10"   # documentation address; use the device's LAN address
+      port: 102
+      groups:
+        # Measurements every run.
+        - name: "mx"
+          fc: ["MX"]
+        # States and events: breaker, recloser, protection start/operate, alarms, Mod/Beh/Loc.
+        - name: "st"
+          fc: ["ST"]
+        # Optional filters, e.g. only the main measurement node:
+        # - name: "mx_main"
+        #   fc: ["MX"]
+        #   logical_devices: ["LD0"]
+        #   logical_nodes: ["MMXU1"]
+
+# Where the rows go. Credentials come from the environment variables named here, loaded from the
+# -envPath dotenv file. The agent does not create tables: see sql/postgres_shadow.sql.
+storage:
+  outputs:
+    - name: "local_shadow"
+      type: "postgres_shadow"
+      enabled: true
+      postgres_shadow:
+        host_env: "PG_HOST"
+        port_env: "PG_PORT"
+        user_env: "PG_USER"
+        password_env: "PG_PASSWORD"
+        database_env: "PG_DATABASE"
+        schema: "edge"
+        table: "noja_recloser_shadow"
